@@ -7,28 +7,42 @@ import datetime
 # Esatblish a connection to the database
 
 try:
+    # Try to connect to the database with given credentials
     mydb = mysql.connector.connect(
         host="localhost",
         user="root",
         password="password",
         database="book_store"
     )
+    # If connected, print a success message
     if mydb.is_connected():
         print("Connected to the database")
+# Catch any errors raised by the above code
 except mysql.connector.Error as err:
+    # Print the error message
     print("Connection error: ", err)
-    host = input("Enter the host: ")
-    user = input("Enter the username: ")
-    password = input("Enter the password: ")
-    database = input("Enter the database name: ")
-    mydb = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database
-    )
-    if mydb.is_connected():
-        print("Connected to the database")
+    try:
+        # Prompt the user for new credentials
+        host = input("Enter the host: ")
+        user = input("Enter the username: ")
+        password = input("Enter the password: ")
+        database = input("Enter the database name: ")
+        # Try to connect to the database again with new credentials
+        mydb = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+        # If connected, print a success message
+        if mydb.is_connected():
+            print("Connected to the database")
+    # Catch any errors raised by the above code
+    except mysql.connector.Error:
+        # Print an error message and exit the program
+        print("Connection Error please try again..")
+        exit()
+
 
 # Cart object
 lcl_cart = {
@@ -58,7 +72,7 @@ user = {
 def new_member_registration():
     cursor = mydb.cursor()
 
-    #Regix safe guards
+    # Regix safe guards
     regex_email = "^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$"
     regex_phone = "^[0-9]+$"
     regex_zip = "^[0-9]{5}$"
@@ -126,129 +140,116 @@ def new_member_registration():
         return
 
 
-
-
-def new_member_registration():
-    cursor = mydb.cursor()
-    regex_email = "^[a-z0-9]+[\._]?[ a-z0-9]+[@]\w+[. ]\w{2,3}$"
-
-    fname = input("Enter First name: ")
-    lname = input("Enter last name: ")
-    address = input("Enter the street address: ")
-    city = input("Enter the city: ")
-    state = input("Enter the state: ")
-    zip = input("Enter zip: ")
-    phone = input("Enter the phone: ")
+def member_login(user):
+    # Ask for user's email and password
     email = input("Enter your email: ")
     pwd = getpass("Enter your password: ")
-    if not re.search(regex_email, email):
-        print("Invalid format, please enter a valid email: email@email.email")
-        return
 
-    # Check if email is alread in use
-    cursor.execute("SELECT * FROM members WHERE email = %s", (email,))
-    existing_member = cursor.fetchone()
-    if existing_member:
-        print("The email belongs to a another user.Please use differnet email")
-        return
+    # List of keys for user dictionary
+    keys = ['id', 'fname', 'lname', 'email', 'address', 'city', 'state', 'zipcode', 'phone', 'password']
 
-    # hashing the password
-    hashed_pwd = hashlib.sha256(pwd.encode()).hexdigest()
-
-    # insert the new member into the member table
     try:
-        cursor.execute("INSERT INTO members (fname, lname, address, city, state, zip, phone, email, password) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (fname, lname, address, city, state, zip, phone, email, hashed_pwd))
-        mydb.commit()
-        print("You have successfully registered! ")
-    except mysql.connector.Error as err1 :
-        print("something went wrong with the regestration" + err1)
+        # Connect to database and execute query to fetch user data
+        with mydb.cursor() as cursor:
+            cursor.execute("SELECT * FROM members WHERE email=%s", (email,))
+            result = cursor.fetchone()
+
+        # If no result found, login is invalid
+        if result is None:
+            print("Invalid email/login credentials.")
+        else:
+            # Hash user inputted password and compare with password in database
+            hashed_pwd = result[9]
+            inputed_pwd = hashlib.sha256(pwd.encode()).hexdigest()
+            if hashed_pwd == inputed_pwd:
+                # Override user dictionary with data fetched from database
+                for i in range(len(keys)):
+                    user[keys[i]] = result[i]
+                print("Login successful!\n")
+                while True:
+                    print("******************************************************")
+                    print("***")
+                    print("***       Welcome to the online book store ")
+                    print("***")
+                    print("******************************************************")
+                    print("1- Browse by subject")
+                    print("2- Search by Authro/Title")
+                    print("3- Check out")
+                    print("4- logout")
+                    choice = input("Type in your option: ")
+
+                    if choice == "1":
+                        browse_by_subject()
+                    elif choice == "2":
+                        search_by_author_or_title()
+                    elif choice == "3":
+                        check_out()
+                    elif choice == "4":
+                        # Close database connection and return
+                        mydb.close()
+                        return
+                    else:
+                        print("Invalid choice. Please try again.")
+
+    except mysql.connector.Error as err:
+        # Print error message if there is an error connecting to database
+        print("Database Error: ", err)
         return
-
-
-def member_login(user):
-    email = input("Enter you email: ")
-    pwd = getpass("Enter your password")
-    cursor = mydb.cursor()
-    cursor.execute("SELECT * FROM members WHERE email=%s", (email,))
-    result = cursor.fetchone()  # the tulpe
-
-    if result is None:
-        print("Invalid email/login credentials.")
-    else:
-        hashed_pwd = result[9]  # the password field is at index 9
-        inputed_pwd = hashlib.sha256(pwd.encode()).hexdigest()  # to compare with the database hash
-        if hashed_pwd == inputed_pwd:
-
-            # overriding the user object
-            i = 0
-            for x, y in user.items():
-                user[x] = result[i]
-                i += 1
-            print("Login successful!\n")
-            while True:
-                print("******************************************************")
-                print("***")
-                print("***       Welcome to the online book store ")
-                print("***")
-                print("******************************************************")
-                print("1- Browse by subject")
-                print("2- Search by Authro/Title")
-                print("3- Check out")
-                print("4- logout")
-                choice = input("Type in your option: ")
-
-                if choice == "1":
-                    browse_by_subject()
-                elif choice == "2":
-                    search_by_author_or_title()
-                elif choice == "3":
-                    check_out()
-                elif choice == "4":
-                    mydb.close()
-                    return
-                else:
-                    print("Invalid choice. Please try again.")
-
 
 def browse_by_subject():
-    cursor = mydb.cursor()
-    cursor.execute("SELECT DISTINCT subject FROM books ORDER BY subject ASC")
-    results = cursor.fetchall()
-    for result in results:
-        print(result[0])
-
-    print("Type the subject you want to browse, or press ENTER to return to the main menu.\n")
-    subject = input("Subject: ").upper()
-    if subject:
-        cursor.execute("SELECT * FROM books WHERE subject=%s", (subject,))
+    try:
+        cursor = mydb.cursor()
+        cursor.execute("SELECT DISTINCT subject FROM books ORDER BY subject ASC")
         results = cursor.fetchall()
-        i = 0
-        # while loop to display 3 books at a time
-        while i < len(results):
-            for j in range(2):
-                if i + j < len(results):
-                    print(f"""Author: {results[i+j][1]}\nTitle: {results[i+j][2]}\nISBN: {results[i+j][0]}\nPrice: ({results[i+j][3]})\nSubject: {results[i+j][4]}\n
-                    """)
-            i += 3  # setting our cout up by 3
-            if i < len(results):
-                print("Type the ISBN of the book you want to add to your cart, or press ENTER to continue browsing.")
-                isbn = input("ISBN: ")
-                if isbn:
-                    cursor.execute("SELECT * FROM books WHERE isbn=%s", (isbn,))
-                    book = cursor.fetchone()
-                    if book:
-                        qty = input("Enter quantity: ")
-                        if qty.isdigit() and int(qty) > 0:
-                            lcl_cart["userid"] = user["userid"]
-                            lcl_cart["isbn"] = book[0]
-                            lcl_cart["qty"] = qty
-                            cursor.execute("INSERT INTO cart (userid, isbn, qty) VALUES (%s, %s, %s)", (lcl_cart["userid"], lcl_cart["isbn"], lcl_cart["qty"]))
-                            mydb.commit()
-                            print(f"{qty} of {book[1]} have been added to your cart.")
-                    else:
-                        print("Invalid ISBN.")
-    else:
-        return
+        for result in results:
+            print(result[0])
+
+        print("Type the subject you want to browse, or press ENTER to return to the main menu.\n")
+        subject = input("Subject: ").upper()
+        if subject:
+            # Use parameterized queries to prevent SQL injection attacks
+            cursor.execute("SELECT * FROM books WHERE subject=%s ORDER BY title", (subject,))
+            results = cursor.fetchall()
+            PAGE_SIZE = 3
+            num_pages = len(results) // PAGE_SIZE + 1
+            page_num = 1
+            while True:
+                start_index = (page_num - 1) * PAGE_SIZE
+                end_index = start_index + PAGE_SIZE
+                current_page = results[start_index:end_index]
+                for book in current_page:
+                    print(f"""Author: {book[1]}\nTitle: {book[2]}\nISBN: {book[0]}\nPrice: ({book[3]})\nSubject: {book[4]}\n""")
+                if len(results) > PAGE_SIZE:
+                    print(f"Page {page_num} of {num_pages}\n")
+
+                choice = input("Type 'n' for next page, 'p' for previous page, or press enter to add to cart or q return to the main menu: ")
+                if choice == 'n':
+                    if page_num < num_pages:
+                        page_num += 1
+                elif choice == 'p':
+                    if page_num > 1:
+                        page_num -= 1
+                elif choice == 'q':
+                    break
+                else:
+                    print("Type the ISBN of the book you want to add to your cart, or press ENTER to continue browsing.")
+                    isbn = input("ISBN: ")
+                    if isbn:
+                        cursor.execute("SELECT * FROM books WHERE isbn=%s", (isbn,))
+                        book = cursor.fetchone()
+                        if book:
+                            qty = input("Enter quantity: ")
+                            if qty.isdigit() and int(qty) > 0:
+                                lcl_cart["userid"] = user["userid"]
+                                lcl_cart["isbn"] = book[0]
+                                lcl_cart["qty"] = qty
+                                cursor.execute("INSERT INTO cart (userid, isbn, qty) VALUES (%s, %s, %s)", (lcl_cart["userid"], lcl_cart["isbn"], lcl_cart["qty"]))
+                                mydb.commit()
+                                print(f"{qty} of {book[1]} have been added to your cart.")
+                        else:
+                            print("Invalid ISBN.")
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
 
 
 def search_by_author_or_title():
@@ -304,7 +305,7 @@ def search_by_author_or_title():
             while i < len(results):
                 for j in range(3):
                     if i + j < len(results):
-                        print(f"{results[i+j][1]} ({results[i+j][3]}) - {results[i+j][4]}")
+                        print(f"{results[i+j][1]}\nTitle: {results[i+j][2]}\nISBN: {results[i+j][0]}\nPrice: ({results[i+j][3]})\nSubject: {results[i+j][4]}\n")
                 i += 3  # setting out cout up by 3
                 if i < len(results):
                     print("Type the ISBN of the book you want to add to your cart, or press ENTER to continue browsing.")
@@ -417,7 +418,7 @@ def main():
         elif choice == "2":
             new_member_registration()
         elif choice == "3":
-            # TODO: close the connection to the database and exit the program
+            mydb.close()
             exit()
         else:
             print("Invalid choice. Please try again.")
