@@ -146,7 +146,7 @@ def member_login(user):
     pwd = getpass("Enter your password: ")
 
     # List of keys for user dictionary
-    keys = ['id', 'fname', 'lname', 'email', 'address', 'city', 'state', 'zipcode', 'phone', 'password']
+    keys = ['fname', 'lname', 'address', 'city', 'state', 'zip', 'phone', 'email', 'userid', 'password', 'creditcardtype', 'creditcardnumber']
 
     try:
         # Connect to database and execute query to fetch user data
@@ -185,8 +185,8 @@ def member_login(user):
                     elif choice == "3":
                         check_out()
                     elif choice == "4":
-                        # Close database connection and return
-                        mydb.close()
+                        lcl_cart.clear()
+                        user.clear()
                         return
                     else:
                         print("Invalid choice. Please try again.")
@@ -267,7 +267,7 @@ def search_by_author_or_title():
             author = input("Enter author's name or a part of it: ")
             cursor.execute("SELECT * FROM books WHERE author LIKE %s", (f"%{author}%",))
             results = cursor.fetchall()
-            PAGE_SIZE = 3 # number of books per page
+            PAGE_SIZE = 3  # number of books per page
             num_pages = len(results) // PAGE_SIZE + 1
             page_num = 1
             while True:
@@ -349,6 +349,7 @@ def search_by_author_or_title():
                             print("Invalid ISBN.")
         elif choice == "3":
             return
+
 
 def check_out():
     cursor = mydb.cursor()
@@ -435,6 +436,7 @@ def main():
             new_member_registration()
         elif choice == "3":
             mydb.close()
+            user.clear()
             exit()
         else:
             print("Invalid choice. Please try again.")
