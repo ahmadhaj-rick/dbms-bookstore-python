@@ -63,10 +63,9 @@ def search_by_author_or_title():
                 current_page = results[start_index:end_index]
                 for book in current_page:
                     print(f"""Author: {book[1]}\nTitle: {book[2]}\nISBN: {book[0]}\nPrice: ({book[3]})\nSubject: {book[4]}\n""")
-                    if len(results) > PAGE_SIZE:
-                        print(f"Page {page_num} of {num_pages}\n")
-                    else:
-                        break
+                if len(results) > PAGE_SIZE:
+                    print(f"Page {page_num} of {num_pages}\n")
+        
                 choice = input("Type 'n' for next page, 'p' for previous page, or press enter to add to cart or q return to the main menu: ")
                 if choice == 'n':
                     if page_num < num_pages:
@@ -98,14 +97,28 @@ def search_by_author_or_title():
             title = input("Enter book title or a part of it: ")
             cursor.execute("SELECT * FROM books WHERE title LIKE %s", (f"%{title}%",))
             results = cursor.fetchall()
-            i = 0
-            # while loop to display 3 books at a time
-            while i < len(results):
-                for j in range(3):
-                    if i + j < len(results):
-                        print(f"{results[i+j][1]}\nTitle: {results[i+j][2]}\nISBN: {results[i+j][0]}\nPrice: ({results[i+j][3]})\nSubject: {results[i+j][4]}\n")
-                i += 3  # setting out cout up by 3
-                if i < len(results):
+            PAGE_SIZE = 3 # how many books per page 
+            num_pages = len(results) // PAGE_SIZE + 1
+            page_num = 1
+            while True:
+                start_index = (page_num - 1) * PAGE_SIZE
+                end_index = start_index + PAGE_SIZE
+                current_page = results[start_index:end_index]
+                for book in current_page:
+                    print(f"""Author: {book[1]}\nTitle: {book[2]}\nISBN: {book[0]}\nPrice: ({book[3]})\nSubject: {book[4]}\n""")
+                if len(results) > PAGE_SIZE:
+                    print(f"Page {page_num} of {num_pages}\n")
+        
+                choice = input("Type 'n' for next page, 'p' for previous page, or press enter to add to cart or q return to the main menu: ")
+                if choice == 'n':
+                    if page_num < num_pages:
+                        page_num += 1
+                elif choice == 'p':
+                    if page_num > 1:
+                        page_num -= 1
+                elif choice == 'q':
+                    break
+                else:
                     print("Type the ISBN of the book you want to add to your cart, or press ENTER to continue browsing.")
                     isbn = input("ISBN: ")
                     if isbn:
@@ -120,13 +133,5 @@ def search_by_author_or_title():
                                 cursor.execute("INSERT INTO cart (userid, isbn, qty) VALUES (%s, %s, %s)", (lcl_cart["userid"], lcl_cart["isbn"], lcl_cart["qty"]))
                                 mydb.commit()
                                 print(f"{qty} of {book[1]} have been added to your cart.")
-                            elif qty.isdigit() and int(qty) == 0:
-                                cursor.execute("DELETE FROM cart WHERE userid=%s AND isbn=%s", (user["userid"], isbn))
-                                mydb.commit()
-                                print(f"{book[1]} has been removed from your cart.")
-                            else:
-                                print("Invalid ISBN.")
-                        elif choice == "3":
-                            break
                         else:
-                            print("Invalid option. Please try again.")
+                            print("Invalid ISBN.")
